@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #FAFAF8; }
+    * { box-sizing: border-box; }
+    button { font-family: 'Noto Sans JP', sans-serif; cursor: pointer; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #DEDED8; border-radius: 4px; }
+  </style>
+</helmet>
+
+<div style="font-family: 'Noto Sans JP', sans-serif; color: #1A1A18; min-height: 100vh; background: #FAFAF8;">
+
+  <!-- ===== Header ===== -->
+  <div style="position: sticky; top: 0; z-index: 20; background: rgba(250,250,248,0.94); backdrop-filter: blur(10px); border-bottom: 1px solid #E8E8E4;">
+    <div style="max-width: 1400px; margin: 0 auto; padding: 12px 18px 10px; display: flex; align-items: center; gap: 14px;">
+      <div style="font-weight: 900; font-size: 17px; letter-spacing: 0.08em; white-space: nowrap;">NOA <span style="font-weight: 500; color: #8A8A84;">SCHEDULE</span></div>
+      <div style="font-size: 13px; color: #55554F; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ rangeLabel }}</div>
+      <div style="margin-left: auto; display: flex; gap: 6px; align-items: center;">
+        <button onClick="{{ goPrev }}" style="width: 34px; height: 34px; border: 1px solid #E0E0DA; background: #FFFFFF; border-radius: 9px; font-size: 14px; color: #55554F;" style-hover="background: #F1F1ED;">‹</button>
+        <button onClick="{{ goToday }}" style="height: 34px; padding: 0 12px; border: 1px solid #E0E0DA; background: #FFFFFF; border-radius: 9px; font-size: 12px; font-weight: 700; color: #55554F;" style-hover="background: #F1F1ED;">今日</button>
+        <button onClick="{{ goNext }}" style="width: 34px; height: 34px; border: 1px solid #E0E0DA; background: #FFFFFF; border-radius: 9px; font-size: 14px; color: #55554F;" style-hover="background: #F1F1ED;">›</button>
+      </div>
+    </div>
+    <!-- mobile day tabs -->
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; gap: 6px; padding: 0 14px 10px; overflow-x: auto;">
+        <sc-for list="{{ dayTabs }}" as="t" hint-placeholder-count="7">
+          <button onClick="{{ t.onSelect }}" style="flex: 1; min-width: 44px; min-height: 48px; border: 1px solid {{ t.border }}; background: {{ t.bg }}; color: {{ t.color }}; border-radius: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px 0;">
+            <span style="font-size: 10px; opacity: 0.75;">{{ t.dow }}</span>
+            <span style="font-size: 15px; font-weight: 700;">{{ t.date }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- ===== Mobile: day calendar ===== -->
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width: 680px; margin: 0 auto; padding: 16px 12px 160px;">
+      <sc-if value="{{ noDayResults }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align: center; padding: 40px 0 10px; color: #A6A69F; font-size: 13px;">条件に合うレッスンがありません</div>
+      </sc-if>
+      <div style="position: relative; height: {{ timelineHeight }}px;">
+        <sc-for list="{{ hourMarks }}" as="h" hint-placeholder-count="6">
+          <div style="position: absolute; left: 0; right: 0; top: {{ h.top }}px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; color: #A6A69F; width: 38px; text-align: right; transform: translateY(-1px);">{{ h.label }}</span>
+            <div style="flex: 1; height: 1px; background: #E8E8E4;"></div>
+          </div>
+        </sc-for>
+        <sc-for list="{{ dayClasses }}" as="c" hint-placeholder-count="5">
+          <div style="position: absolute; top: {{ c.top }}px; height: {{ c.height }}px; left: {{ c.left }}; width: {{ c.width }}; padding: 0 2px; opacity: {{ c.opacity }};">
+            <div style="position: relative; height: 100%; background: {{ c.tint }}; border-radius: 7px; padding: 6px 8px 6px 12px; overflow: hidden;">
+              <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: {{ c.bar }};"></div>
+              <div style="display: flex; align-items: flex-start; gap: 4px;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-size: 13px; font-weight: 700; line-height: 1.25; color: {{ c.titleColor }};">{{ c.genre }}</span>
+                    <span style="font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: {{ c.badgeBg }}; color: #FFFFFF; white-space: nowrap;">{{ c.level }}</span>
+                  </div>
+                  <div style="font-size: 11px; font-weight: 500; color: {{ c.titleColor }}; opacity: 0.85; margin-top: 1px;">{{ c.start }} ~{{ c.end }}</div>
+                </div>
+                <button onClick="{{ c.onFav }}" aria-label="お気に入り" style="width: 30px; height: 30px; margin: -5px -6px 0 0; background: none; border: none; font-size: 16px; color: {{ c.starColor }}; flex-shrink: 0;">{{ c.star }}</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; min-width: 0; flex-wrap: wrap;">
+                <img src="{{ c.avatar }}" alt="" style="width: 28px; height: 28px; border-radius: 6px; object-fit: cover; background: #EBEBE6; flex-shrink: 0;">
+                <span style="font-size: 11px; color: {{ c.titleColor }}; opacity: 0.75;">{{ c.inst }}{{ c.locTag }}</span>
+                <span style="margin-left: auto; font-size: 10.5px; font-weight: 700; color: {{ c.statusColor }}; white-space: nowrap;">{{ c.statusLabel }}</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== Desktop: week calendar ===== -->
+  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+    <div style="max-width: 1400px; margin: 0 auto; padding: 16px 18px 130px;">
+      <!-- day headers -->
+      <div style="display: flex; margin-bottom: 8px;">
+        <div style="width: 46px; flex-shrink: 0;"></div>
+        <sc-for list="{{ weekCols }}" as="d" hint-placeholder-count="7">
+          <div style="flex: 1; min-width: 0; padding: 0 2px;">
+            <div style="text-align: center; padding: 7px 0; border-radius: 10px; background: {{ d.headBg }}; color: {{ d.headColor }};">
+              <span style="font-size: 11px; opacity: 0.75;">{{ d.dow }}</span>
+              <span style="font-size: 15px; font-weight: 700; margin-left: 5px;">{{ d.date }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <!-- time grid -->
+      <div style="position: relative; height: {{ timelineHeight }}px;">
+        <sc-for list="{{ hourMarks }}" as="h" hint-placeholder-count="6">
+          <div style="position: absolute; left: 0; right: 0; top: {{ h.top }}px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; color: #A6A69F; width: 38px; text-align: right; transform: translateY(-1px);">{{ h.label }}</span>
+            <div style="flex: 1; height: 1px; background: #E8E8E4;"></div>
+          </div>
+        </sc-for>
+        <div style="position: absolute; left: 46px; right: 0; top: 0; bottom: 0; display: flex;">
+          <sc-for list="{{ weekCols }}" as="d" hint-placeholder-count="7">
+            <div style="flex: 1; min-width: 0; position: relative; border-left: 1px solid #EFEFEA; border-color: #E3E2E2EB">
+              <sc-for list="{{ d.classes }}" as="c" hint-placeholder-count="4">
+                <div style="position: absolute; top: {{ c.top }}px; height: {{ c.height }}px; left: {{ c.left }}; width: {{ c.width }}; padding: 0 2px 0 1px; opacity: {{ c.opacity }};">
+                  <div style="position: relative; height: 100%; background: {{ c.tint }}; border-radius: 6px; padding: 4px 6px 4px 9px; overflow: hidden;">
+                    <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: {{ c.bar }};"></div>
+                    <div style="display: flex; align-items: flex-start; gap: 2px;">
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                          <span style="font-size: 12px; font-weight: 700; line-height: 1.2; color: {{ c.titleColor }};">{{ c.genre }}</span>
+                          <span style="font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: {{ c.badgeBg }}; color: #FFFFFF; white-space: nowrap;">{{ c.level }}</span>
+                        </div>
+                        <div style="font-size: 10.5px; font-weight: 500; color: {{ c.titleColor }}; opacity: 0.85; margin-top: 1px; white-space: nowrap;">{{ c.start }} ~{{ c.end }}</div>
+                      </div>
+                      <button onClick="{{ c.onFav }}" aria-label="お気に入り" style="width: 26px; height: 26px; margin: -4px -5px 0 0; background: none; border: none; font-size: 14px; color: {{ c.starColor }}; flex-shrink: 0;">{{ c.star }}</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px; margin-top: 3px; min-width: 0; flex-wrap: wrap;">
+                      <img src="{{ c.avatar }}" alt="" style="width: 24px; height: 24px; border-radius: 6px; object-fit: cover; background: #EBEBE6; flex-shrink: 0;">
+                      <span style="font-size: 10.5px; color: {{ c.titleColor }}; opacity: 0.75;">{{ c.inst }}{{ c.locTag }}</span>
+                    </div>
+                    <div style="font-size: 10.5px; font-weight: 700; color: {{ c.statusColor }}; margin-top: 2px; white-space: nowrap;">{{ c.statusLabel }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <sc-if value="{{ noWeekResults }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align: center; padding: 30px 0; color: #A6A69F; font-size: 13px;">条件に合うレッスンがありません</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- ===== Bottom filter bar ===== -->
+  <div style="position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;">
+    <sc-if value="{{ filterOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #FFFFFF; border-top: 1px solid #E8E8E4; box-shadow: 0 -14px 44px rgba(20,20,16,0.10); max-height: 68vh; overflow-y: auto;">
+        <div style="max-width: 1280px; margin: 0 auto; padding: 18px 18px 8px; display: flex; flex-direction: column; gap: 18px;">
+
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="font-size: 11px; letter-spacing: 0.12em; color: #8A8A84; font-weight: 700;">スタジオ</div>
+            <div style="display: flex; gap: 7px; flex-wrap: wrap; align-items: center;">
+              <button onClick="{{ toggleLocMenu }}" style="min-height: 38px; padding: 6px 14px; border-radius: 9px; border: 1px solid #E0E0DA; background: #FFFFFF; color: #1A1A18; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;">{{ locName }} <span style="font-size: 10px; color: #A6A69F;">{{ locMenuChevron }}</span></button>
+              <sc-for list="{{ locChips }}" as="l" hint-placeholder-count="2">
+                <button onClick="{{ l.onSelect }}" style="min-height: 38px; padding: 6px 14px; border-radius: 999px; border: 1px solid {{ l.border }}; background: {{ l.bg }}; color: {{ l.color }}; font-size: 13px; font-weight: 700;">{{ l.name }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ locMenuOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px; background: #FFFFFF; border: 1px solid #E8E8E4; border-radius: 12px; padding: 6px;">
+                <sc-for list="{{ locMenuRows }}" as="r" hint-placeholder-count="6">
+                  <div style="display: flex; align-items: center; border-radius: 8px; background: {{ r.bg }};">
+                    <button onClick="{{ r.onStar }}" aria-label="スタジオをお気に入り" style="width: 38px; height: 38px; background: none; border: none; font-size: 16px; color: {{ r.starColor }}; flex-shrink: 0; visibility: {{ r.starVis }};">{{ r.star }}</button>
+                    <button onClick="{{ r.onSelect }}" style="flex: 1; min-height: 38px; background: none; border: none; text-align: left; font-size: 13px; font-weight: {{ r.weight }}; color: #1A1A18; padding: 0 6px 0 0;">{{ r.name }}</button>
+                    <span style="font-size: 12px; color: #55554F; padding-right: 12px;">{{ r.check }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="font-size: 11px; letter-spacing: 0.12em; color: #8A8A84; font-weight: 700;">ジャンル</div>
+            <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+              <sc-for list="{{ genreChips }}" as="g" hint-placeholder-count="7">
+                <button onClick="{{ g.onToggle }}" style="min-height: 38px; padding: 6px 14px; border-radius: 999px; border: 1px solid {{ g.border }}; background: {{ g.bg }}; color: {{ g.color }}; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 7px;"><span style="width: 9px; height: 9px; border-radius: 50%; background: {{ g.dot }}; flex-shrink: 0;"></span>{{ g.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="font-size: 11px; letter-spacing: 0.12em; color: #8A8A84; font-weight: 700;">レベル</div>
+            <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+              <sc-for list="{{ levelChips }}" as="g" hint-placeholder-count="4">
+                <button onClick="{{ g.onToggle }}" style="min-height: 38px; padding: 6px 14px; border-radius: 999px; border: 1px solid {{ g.border }}; background: {{ g.bg }}; color: {{ g.color }}; font-size: 13px; font-weight: 500;">{{ g.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 8px;">
+            <button onClick="{{ toggleFavOnly }}" style="display: flex; align-items: center; gap: 10px; min-height: 40px; background: none; border: none; padding: 0;">
+              <span style="width: 44px; height: 26px; border-radius: 999px; background: {{ favOnlyTrack }}; position: relative; display: inline-block; transition: background 0.15s ease; flex-shrink: 0;">
+                <span style="position: absolute; top: 3px; left: {{ favOnlyKnob }}px; width: 20px; height: 20px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: left 0.15s ease;"></span>
+              </span>
+              <span style="font-size: 13px; font-weight: 700; color: #55554F;">お気に入りのみ表示</span>
+            </button>
+            <button onClick="{{ resetFilters }}" style="margin-left: auto; min-height: 40px; padding: 6px 14px; border-radius: 999px; border: none; background: none; color: #8A8A84; font-size: 12px; font-weight: 500;" style-hover="color: #1A1A18;">リセット</button>
+          </div>
+
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="background: #FFFFFF; border-top: 1px solid #E8E8E4; box-shadow: 0 -8px 28px rgba(20,20,16,0.07); padding-bottom: env(safe-area-inset-bottom);">
+      <div style="max-width: 1280px; margin: 0 auto; padding: 8px 14px; display: flex; align-items: center; gap: 10px;">
+        <button onClick="{{ toggleFilter }}" style="flex: 1; min-width: 0; min-height: 46px; display: flex; align-items: center; gap: 10px; background: none; border: none; padding: 4px 6px; text-align: left;">
+          <span style="font-size: 14px; font-weight: 700; white-space: nowrap;">{{ locName }}</span>
+          <span style="font-size: 12px; color: #8A8A84; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ filterSummary }}</span>
+          <span style="margin-left: auto; font-size: 11px; color: #A6A69F; white-space: nowrap;">{{ chevron }} 絞り込み</span>
+        </button>
+        <button onClick="{{ toggleFavOnly }}" aria-label="お気に入りのみ" style="min-height: 46px; padding: 6px 16px; border-radius: 999px; border: 1px solid {{ favOnlyBorder }}; background: {{ favOnlyBg }}; color: {{ favOnlyStarColor }}; font-size: 15px; font-weight: 700; white-space: nowrap;">{{ favOnlyStar }}</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;closedDisplay&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;グレー表示&quot;, &quot;options&quot;: [&quot;グレー表示&quot;, &quot;非表示&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;表示&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.LOCS = [[8, '新宿'], [4, '池袋'], [1, '秋葉原'], [2, '恵比寿'], [7, '中目黒'], [3, '銀座'], [11, '赤坂'], [12, '原宿'], [6, '吉祥寺'], [10, '都立大'], [5, '駒沢'], [14, '御茶ノ水'], [15, '中野'], [13, '自由が丘']];
+    this.GENRES = ['HIP-HOP', 'JAZZ', 'LOCK/SOUL', 'HOUSE', 'PUNKING/FREESTYLE', 'POP', 'リズムトレーニング'];
+    this.GENRE_COLORS = {
+      'HIP-HOP': '#C05B3A',
+      'JAZZ': '#7B5EA7',
+      'LOCK/SOUL': '#B08A2E',
+      'HOUSE': '#3E8A9C',
+      'PUNKING/FREESTYLE': '#B54B84',
+      'POP': '#4C7FBF',
+      'リズムトレーニング': '#5B9455'
+    };
+    this.LEVELS = ['超入門', '入門', '初級', '中級'];
+    this.INSTRUCTORS = ['KAORI', 'YU-KI', 'SHOTA', 'MIHO', 'RYO', 'ERIKA', 'TAKU', 'NANA', 'KENJI', 'AYAKA', 'DAI', 'RIKO', 'HARUKA', 'JUN', 'SAYA', 'TOMO'];
+    this.STAR_YELLOW = '#E7AE33';
+    this.DAY_START = 10 * 60;
+    this.DAY_END = 23 * 60;
+    this.PPH = 118;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('noa-sched-v1') || '{}'); } catch (e) {}
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    this.state = {
+      selMs: d.getTime(),
+      isMobile: typeof window !== 'undefined' && window.innerWidth < 760,
+      filterOpen: false,
+      locMenuOpen: false,
+      locId: saved.locId != null ? saved.locId : 8,
+      genres: saved.genres || [],
+      levels: saved.levels || [],
+      favOnly: !!saved.favOnly,
+      favs: saved.favs || {},
+      favLocs: saved.favLocs || [8]
+    };
+    this.schedule = this.buildSchedule();
+    this.onResize = () => {
+      const m = window.innerWidth < 760;
+      if (m !== this.state.isMobile) this.setState({ isMobile: m });
+    };
+  }
+
+  componentDidMount() { window.addEventListener('resize', this.onResize); }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); }
+
+  hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  rng(seed) { let t = seed; return () => { t += 0x6D2B79F5; let r = Math.imul(t ^ (t >>> 15), t | 1); r ^= r + Math.imul(r ^ (r >>> 7), r | 61); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+  toMin(t) { const p = t.split(':'); return (+p[0]) * 60 + (+p[1]); }
+  toHM(m) { return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); }
+
+  buildSchedule() {
+    const roomStarts = [
+      ['10:30', '12:00', '13:30', '15:00', '16:30', '18:00', '19:30', '21:00'],
+      ['11:00', '12:30', '14:30', '16:00', '17:30', '19:00', '20:30']
+    ];
+    const sched = {};
+    for (const [id, name] of this.LOCS) {
+      sched[id] = [];
+      for (let day = 0; day < 7; day++) {
+        const r = this.rng(this.hash('sch' + id + '-' + day));
+        const list = [];
+        for (let room = 0; room < roomStarts.length; room++) {
+          for (const t of roomStarts[room]) {
+            if (r() < 0.38) continue;
+            const genre = this.GENRES[Math.floor(r() * this.GENRES.length)];
+            const level = genre === 'リズムトレーニング' ? '超入門' : this.LEVELS[Math.floor(r() * this.LEVELS.length)];
+            const inst = this.INSTRUCTORS[Math.floor(r() * this.INSTRUCTORS.length)];
+            const dur = r() < 0.5 ? 75 : 85;
+            const startMin = this.toMin(t);
+            list.push({ id: id + '-' + day + '-' + room + '-' + t, locId: id, locName: name, start: t, startMin: startMin, endMin: startMin + dur, genre: genre, level: level, inst: inst });
+          }
+        }
+        list.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+        sched[id].push(list);
+      }
+    }
+    return sched;
+  }
+
+  save(patch) {
+    this.setState(patch, () => {
+      const s = this.state;
+      try {
+        localStorage.setItem('noa-sched-v1', JSON.stringify({ locId: s.locId, genres: s.genres, levels: s.levels, favOnly: s.favOnly, favs: s.favs, favLocs: s.favLocs }));
+      } catch (e) {}
+    });
+  }
+
+  status(dateKey, classId) {
+    const r = this.rng(this.hash(dateKey + '|' + classId))();
+    if (r < 0.55) return { label: '予約可', color: '#3E8A5B', dim: false };
+    if (r < 0.72) return { label: '残りわずか', color: '#C08A2E', dim: false };
+    if (r < 0.88) return { label: '満員', color: '#8A8A84', dim: true };
+    return { label: '休講', color: '#B5493C', dim: true };
+  }
+
+  deco(c, dateKey, showLoc) {
+    const st = this.status(dateKey, c.id);
+    const hideClosed = (this.props.closedDisplay ?? 'グレー表示') === '非表示';
+    if (hideClosed && st.dim) return null;
+    const fav = !!this.state.favs[c.id];
+    const col = st.dim ? '#8A8A84' : (this.GENRE_COLORS[c.genre] || '#55554F');
+    return Object.assign({}, c, {
+      end: this.toHM(c.endMin),
+      locTag: showLoc ? '　' + c.locName : '',
+      avatar: 'https://i.pravatar.cc/64?u=noa-' + c.inst,
+      opacity: st.dim ? 0.55 : 1,
+      bar: col,
+      badgeBg: col + 'CC',
+      tint: col + '1A',
+      titleColor: col,
+      statusLabel: st.label,
+      statusColor: st.color,
+      star: fav ? '★' : '☆',
+      starColor: fav ? this.STAR_YELLOW : '#C0C0B9',
+      onFav: () => {
+        const favs = Object.assign({}, this.state.favs);
+        if (favs[c.id]) delete favs[c.id]; else favs[c.id] = true;
+        this.save({ favs: favs });
+      }
+    });
+  }
+
+  // assign lanes to overlapping classes; gutterPx = left offset for hour labels (0 inside week columns)
+  layoutTimeline(list, gutterPx) {
+    const clusters = [];
+    let cur = [], curEnd = -1;
+    for (const c of list) {
+      if (cur.length && c.startMin < curEnd) { cur.push(c); curEnd = Math.max(curEnd, c.endMin); }
+      else { if (cur.length) clusters.push(cur); cur = [c]; curEnd = c.endMin; }
+    }
+    if (cur.length) clusters.push(cur);
+    const out = [];
+    const base = gutterPx ? gutterPx + 'px + ' : '';
+    const avail = gutterPx ? '(100% - ' + gutterPx + 'px)' : '100%';
+    for (const cluster of clusters) {
+      const laneEnds = [];
+      for (const c of cluster) {
+        let lane = laneEnds.findIndex((e) => e <= c.startMin);
+        if (lane === -1) { lane = laneEnds.length; laneEnds.push(0); }
+        laneEnds[lane] = c.endMin;
+        c._lane = lane;
+      }
+      const n = laneEnds.length;
+      for (const c of cluster) {
+        const frac = 1 / n;
+        out.push(Object.assign({}, c, {
+          top: Math.round((c.startMin - this.DAY_START) / 60 * this.PPH) + 1,
+          height: Math.round((c.endMin - c.startMin) / 60 * this.PPH) - 4,
+          left: 'calc(' + base + avail + ' * ' + (c._lane * frac).toFixed(4) + ')',
+          width: 'calc(' + avail + ' * ' + frac.toFixed(4) + ')'
+        }));
+      }
+    }
+    return out;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dows = ['月', '火', '水', '木', '金', '土', '日'];
+    const sel = new Date(s.selMs);
+    const monday = new Date(s.selMs);
+    monday.setDate(sel.getDate() - ((sel.getDay() + 6) % 7));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dateOf = (i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; };
+    const keyOf = (d) => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+
+    const passes = (c) => {
+      if (s.genres.length && !s.genres.includes(c.genre)) return false;
+      if (s.levels.length && !s.levels.includes(c.level)) return false;
+      if (s.favOnly && !s.favs[c.id]) return false;
+      return true;
+    };
+    const showLoc = s.locId === 0;
+    const classesFor = (dayIdx, dateKey) => {
+      let pool = [];
+      if (showLoc) { for (const pair of this.LOCS) pool = pool.concat(this.schedule[pair[0]][dayIdx]); }
+      else pool = this.schedule[s.locId] ? this.schedule[s.locId][dayIdx] : [];
+      const out = [];
+      for (const c of pool) {
+        if (!passes(c)) continue;
+        const dc = this.deco(c, dateKey, showLoc);
+        if (dc) out.push(dc);
+      }
+      out.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin || a.locName.localeCompare(b.locName));
+      return out;
+    };
+
+    // Mobile
+    const selDayIdx = (sel.getDay() + 6) % 7;
+    const dayTabs = dows.map((dw, i) => {
+      const d = dateOf(i);
+      const isSel = i === selDayIdx;
+      const isToday = d.getTime() === today.getTime();
+      return {
+        dow: dw, date: String(d.getDate()),
+        bg: isSel ? '#1A1A18' : '#FFFFFF',
+        color: isSel ? '#FFFFFF' : (isToday ? '#B5493C' : '#55554F'),
+        border: isSel ? '#1A1A18' : '#E0E0DA',
+        onSelect: () => this.setState({ selMs: d.getTime() })
+      };
+    });
+    const dayFlat = classesFor(selDayIdx, keyOf(sel));
+    const dayClasses = this.layoutTimeline(dayFlat, 50);
+    const hourMarks = [];
+    for (let m = this.DAY_START; m <= this.DAY_END; m += 60) {
+      hourMarks.push({ label: this.toHM(m), top: Math.round((m - this.DAY_START) / 60 * this.PPH) });
+    }
+
+    // Desktop
+    const weekCols = dows.map((dw, i) => {
+      const d = dateOf(i);
+      const isToday = d.getTime() === today.getTime();
+      return {
+        dow: dw, date: (d.getMonth() + 1) + '/' + d.getDate(),
+        headBg: isToday ? '#1A1A18' : '#F1F1ED',
+        headColor: isToday ? '#FFFFFF' : '#55554F',
+        classes: this.layoutTimeline(classesFor(i, keyOf(d)), 0)
+      };
+    });
+    const weekEmpty = weekCols.every((c) => c.classes.length === 0);
+
+    const fmt = (d) => (d.getMonth() + 1) + '/' + d.getDate() + '（' + dows[(d.getDay() + 6) % 7] + '）';
+    const sunday = dateOf(6);
+
+    // Filters
+    const locName = showLoc ? '全スタジオ' : (this.LOCS.find((p) => p[0] === s.locId) || [0, ''])[1];
+    const parts = [];
+    if (s.genres.length) parts.push('ジャンル' + s.genres.length);
+    if (s.levels.length) parts.push('レベル' + s.levels.length);
+    if (s.favOnly) parts.push('お気に入りのみ');
+    const chipStyle = (on) => ({
+      bg: on ? '#1A1A18' : '#FFFFFF',
+      color: on ? '#FFFFFF' : '#55554F',
+      border: on ? '#1A1A18' : '#E0E0DA'
+    });
+    const locChips = s.favLocs
+      .map((id) => ({ id: id, name: (this.LOCS.find((p) => p[0] === id) || [0, '?'])[1] }))
+      .map((l) => Object.assign({ name: l.name, onSelect: () => this.save({ locId: l.id }) }, chipStyle(s.locId === l.id)));
+    const locMenuRows = [{ id: 0, name: '全スタジオ', hasStar: false }]
+      .concat(this.LOCS.map((p) => ({ id: p[0], name: p[1], hasStar: true })))
+      .map((l) => {
+        const isFav = s.favLocs.includes(l.id);
+        const isSel = s.locId === l.id;
+        return {
+          name: l.name,
+          bg: isSel ? '#F1F1ED' : 'transparent',
+          weight: isSel ? 700 : 400,
+          check: isSel ? '✓' : '',
+          star: isFav ? '★' : '☆',
+          starColor: isFav ? this.STAR_YELLOW : '#C9C9C2',
+          starVis: l.hasStar ? 'visible' : 'hidden',
+          onStar: () => {
+            if (!l.hasStar) return;
+            this.save({ favLocs: isFav ? s.favLocs.filter((x) => x !== l.id) : s.favLocs.concat([l.id]) });
+          },
+          onSelect: () => { this.save({ locId: l.id }); this.setState({ locMenuOpen: false }); }
+        };
+      });
+    const genreChips = this.GENRES.map((g) => Object.assign({
+      name: g,
+      dot: this.GENRE_COLORS[g],
+      onToggle: () => this.save({ genres: s.genres.includes(g) ? s.genres.filter((x) => x !== g) : s.genres.concat([g]) })
+    }, chipStyle(s.genres.includes(g))));
+    const levelChips = this.LEVELS.map((g) => Object.assign({
+      name: g,
+      onToggle: () => this.save({ levels: s.levels.includes(g) ? s.levels.filter((x) => x !== g) : s.levels.concat([g]) })
+    }, chipStyle(s.levels.includes(g))));
+
+    return {
+      isMobile: s.isMobile,
+      isDesktop: !s.isMobile,
+      rangeLabel: s.isMobile ? fmt(sel) : fmt(monday) + ' 〜 ' + fmt(sunday),
+      goPrev: () => this.setState({ selMs: s.selMs - 86400000 * (s.isMobile ? 1 : 7) }),
+      goNext: () => this.setState({ selMs: s.selMs + 86400000 * (s.isMobile ? 1 : 7) }),
+      goToday: () => this.setState({ selMs: today.getTime() }),
+      dayTabs: dayTabs,
+      dayClasses: dayClasses,
+      noDayResults: dayClasses.length === 0,
+      timelineHeight: Math.round((this.DAY_END - this.DAY_START) / 60 * this.PPH) + 20,
+      hourMarks: hourMarks,
+      weekCols: weekCols,
+      noWeekResults: weekEmpty,
+      filterOpen: s.filterOpen,
+      toggleFilter: () => this.setState({ filterOpen: !s.filterOpen, locMenuOpen: false }),
+      chevron: s.filterOpen ? '▾' : '▴',
+      locName: locName,
+      filterSummary: parts.length ? parts.join('・') : '絞り込みなし',
+      locMenuOpen: s.locMenuOpen,
+      toggleLocMenu: () => this.setState({ locMenuOpen: !s.locMenuOpen }),
+      locMenuChevron: s.locMenuOpen ? '▾' : '▴',
+      locMenuRows: locMenuRows,
+      locChips: locChips,
+      genreChips: genreChips,
+      levelChips: levelChips,
+      toggleFavOnly: () => this.save({ favOnly: !s.favOnly }),
+      favOnlyTrack: s.favOnly ? '#1A1A18' : '#D4D4CE',
+      favOnlyKnob: s.favOnly ? 21 : 3,
+      favOnlyStar: s.favOnly ? '★' : '☆',
+      favOnlyStarColor: s.favOnly ? this.STAR_YELLOW : '#8A8A84',
+      favOnlyBg: s.favOnly ? '#FDF6E7' : '#FFFFFF',
+      favOnlyBorder: s.favOnly ? this.STAR_YELLOW : '#E0E0DA',
+      resetFilters: () => this.save({ genres: [], levels: [], favOnly: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

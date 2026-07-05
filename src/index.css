@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #fafaf8;
+}
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  color: #1a1a18;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #deded8;
+  border-radius: 4px;
+}
