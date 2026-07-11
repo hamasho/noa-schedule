@@ -3,6 +3,7 @@ import { Header, type DayTab } from './components/Header'
 import { DayView } from './components/DayView'
 import { WeekView, type WeekCol } from './components/WeekView'
 import { FilterBar } from './components/FilterBar'
+import { LoadingOverlay } from './components/LoadingOverlay'
 import type { HourMark } from './components/HourMarks'
 import { CLOSED_DISPLAY, DAY_END, DAY_START, DOWS, LEVEL_ORDER, LOCS, PPH, genreColor } from './lib/data'
 import { reservationStatus, toHM } from './lib/schedule'
@@ -213,9 +214,7 @@ function App() {
         onNext={() => setSelMs(selMs + 86400000 * (isMobile ? 1 : 7))}
         onToday={() => setSelMs(today.getTime())}
       />
-      {loading && (
-        <div className="py-1 text-center text-[11px] tracking-[0.08em] text-[#8A8A84]">読み込み中…</div>
-      )}
+      <LoadingOverlay show={loading} />
       {error ? (
         <div className="px-4 py-16 text-center text-[13px] text-[#B5493C]">{error}</div>
       ) : isMobile ? (
