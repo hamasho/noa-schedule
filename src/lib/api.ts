@@ -58,8 +58,12 @@ export const ALL_GENRE_CODES = [
 
 /** Options for {@link fetchNoaSchedule} / {@link fetchNoaLessons}. */
 export interface FetchScheduleOptions {
-  /** Studio/group ID, e.g. `8` = 新宿 (data.ts LOCS). */
-  locId: number
+  /**
+   * Studio/group ID(s), e.g. `8` = 新宿 (data.ts LOCS). Pass an array to pull
+   * several studios in one request (the "全スタジオ" view); each record still
+   * carries its own `GROUP_ID`.
+   */
+  locId: number | number[]
   /** Genre codes to include; defaults to {@link ALL_GENRE_CODES}. */
   genre?: readonly string[]
   /** Brand ID; defaults to {@link NOA_BRAND_ID}. */
@@ -74,8 +78,9 @@ export interface FetchScheduleOptions {
 const LOC_NAMES = new Map<number, string>(LOCS.map(([id, name]) => [id, name]))
 
 function buildRequest(opts: FetchScheduleOptions): NoaScheduleRequest {
+  const ids = Array.isArray(opts.locId) ? opts.locId : [opts.locId]
   return {
-    location: [String(opts.locId)],
+    location: ids.map(String),
     genre: [...(opts.genre ?? ALL_GENRE_CODES)],
     brand: opts.brand ?? NOA_BRAND_ID,
     is_month: opts.isMonth ?? true,
@@ -139,7 +144,41 @@ export function recordToLesson(r: NoaLessonRecord): Lesson {
     genre: r.GENRE_SUB_NAME,
     level: r.LEVEL_NAME,
     inst: r.NICKNAME || r.INSTRUCTOR_NAME,
+    instImg: r.INSTRUCTOR_IMG,
+    url: r.URL,
+    reserveFlg: r.RESERVE_FLG,
+    daikouFlg: r.Y_DAIKOU_FLG,
   }
+}
+
+/**
+ * Groups records into the app's weekly shape: seven `Lesson[]` lists indexed
+ * Mon(0)…Sun(6), each sorted by start then end time. The API's month view
+ * returns one representative occurrence per weekday, so this is effectively
+ * the recurring weekly pattern the UI renders across every week.
+ */
+export function groupLessonsByWeekday(records: NoaLessonRecord[]): Lesson[][] {
+  const week: Lesson[][] = [[], [], [], [], [], [], []]
+  for (const r of records) {
+    // LESSON_WEEKDAY is JS getDay() numbering (0=日…6=土); the UI is Mon-first.
+    const idx = (Number(r.LESSON_WEEKDAY) + 6) % 7
+    week[idx].push(recordToLesson(r))
+  }
+  for (const day of week) {
+    day.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin)
+  }
+  return week
+}
+
+/**
+ * Convenience: fetch a studio's schedule and return it as the app's weekly
+ * `Lesson[][]` (Mon–Sun). This is what the scheduler UI consumes.
+ */
+export async function fetchNoaWeek(
+  opts: FetchScheduleOptions,
+): Promise<Lesson[][]> {
+  const response = await fetchNoaSchedule(opts)
+  return groupLessonsByWeekday(flattenNoaRecords(response))
 }
 
 /**

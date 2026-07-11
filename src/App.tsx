@@ -4,12 +4,15 @@ import { DayView } from './components/DayView'
 import { WeekView, type WeekCol } from './components/WeekView'
 import { FilterBar } from './components/FilterBar'
 import type { HourMark } from './components/HourMarks'
-import { CLOSED_DISPLAY, DAY_END, DAY_START, DOWS, GENRE_COLORS, LOCS, PPH } from './lib/data'
-import { buildSchedule, status, toHM } from './lib/schedule'
+import { CLOSED_DISPLAY, DAY_END, DAY_START, DOWS, LEVEL_ORDER, LOCS, PPH, genreColor } from './lib/data'
+import { reservationStatus, toHM } from './lib/schedule'
+import { fetchNoaWeek } from './lib/api'
 import { layoutTimeline } from './lib/layout'
 import type { DecoLesson, Lesson } from './types'
 
 const SAVE_KEY = 'noa-sched-v1'
+
+const emptyWeek = (): Lesson[][] => [[], [], [], [], [], [], []]
 
 interface Saved {
   locId?: number
@@ -48,13 +51,34 @@ function App() {
   const [favs, setFavs] = useState<Record<string, boolean>>(saved.favs ?? {})
   const [favLocs, setFavLocs] = useState<number[]>(saved.favLocs ?? [8])
 
-  const schedule = useMemo(buildSchedule, [])
+  const [week, setWeek] = useState<Lesson[][]>(emptyWeek)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 760)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  // Fetch the selected studio's real schedule (all studios when locId === 0).
+  useEffect(() => {
+    const ctrl = new AbortController()
+    setLoading(true)
+    setError(null)
+    const target = locId === 0 ? LOCS.map(([id]) => id) : locId
+    fetchNoaWeek({ locId: target, signal: ctrl.signal })
+      .then(setWeek)
+      .catch((e) => {
+        if (ctrl.signal.aborted) return
+        console.error(e)
+        setError('レッスン情報を取得できませんでした')
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false)
+      })
+    return () => ctrl.abort()
+  }, [locId])
 
   useEffect(() => {
     try {
@@ -74,8 +98,6 @@ function App() {
     d.setDate(monday.getDate() + i)
     return d
   }
-  const keyOf = (d: Date) => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate()
-
   const showLoc = locId === 0
   const passes = (c: Lesson) => {
     if (genres.length && !genres.includes(c.genre)) return false
@@ -84,30 +106,27 @@ function App() {
     return true
   }
 
-  const decorate = (c: Lesson, dateKey: string): DecoLesson | null => {
-    const st = status(dateKey, c.id)
+  const decorate = (c: Lesson): DecoLesson | null => {
+    const st = reservationStatus(c)
     if (CLOSED_DISPLAY === '非表示' && st.dim) return null
     return {
       ...c,
       end: toHM(c.endMin),
       locTag: showLoc ? '　' + c.locName : '',
-      avatar: 'https://i.pravatar.cc/64?u=noa-' + c.inst,
+      avatar: c.instImg,
       dim: st.dim,
       fav: !!favs[c.id],
-      color: st.dim ? '#8A8A84' : (GENRE_COLORS[c.genre] ?? '#55554F'),
+      color: st.dim ? '#8A8A84' : genreColor(c.genre),
       statusLabel: st.label,
       statusColor: st.color,
     }
   }
 
-  const classesFor = (dayIdx: number, dateKey: string): DecoLesson[] => {
-    let pool: Lesson[] = []
-    if (showLoc) for (const [id] of LOCS) pool = pool.concat(schedule[id][dayIdx])
-    else pool = schedule[locId] ? schedule[locId][dayIdx] : []
+  const classesFor = (dayIdx: number): DecoLesson[] => {
     const out: DecoLesson[] = []
-    for (const c of pool) {
+    for (const c of week[dayIdx] ?? []) {
       if (!passes(c)) continue
-      const dc = decorate(c, dateKey)
+      const dc = decorate(c)
       if (dc) out.push(dc)
     }
     out.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin || a.locName.localeCompare(b.locName))
@@ -134,7 +153,7 @@ function App() {
       onSelect: () => setSelMs(d.getTime()),
     }
   })
-  const dayClasses = layoutTimeline(classesFor(selDayIdx, keyOf(sel)), 50)
+  const dayClasses = layoutTimeline(classesFor(selDayIdx), 50)
 
   const hourMarks: HourMark[] = []
   for (let m = DAY_START; m <= DAY_END; m += 60) {
@@ -148,12 +167,31 @@ function App() {
       dow: dw,
       date: d.getMonth() + 1 + '/' + d.getDate(),
       isToday: d.getTime() === today.getTime(),
-      classes: layoutTimeline(classesFor(i, keyOf(d)), 0),
+      classes: layoutTimeline(classesFor(i), 0),
     }
   })
 
   const fmt = (d: Date) => d.getMonth() + 1 + '/' + d.getDate() + '（' + DOWS[(d.getDay() + 6) % 7] + '）'
   const rangeLabel = isMobile ? fmt(sel) : fmt(monday) + ' 〜 ' + fmt(dateOf(6))
+
+  // Filter chip options come from whatever the loaded schedule actually has.
+  const genreOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const day of week) for (const l of day) counts.set(l.genre, (counts.get(l.genre) ?? 0) + 1)
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([g]) => g)
+  }, [week])
+
+  const levelOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const day of week) for (const l of day) set.add(l.level)
+    const rank = (v: string) => {
+      const i = LEVEL_ORDER.indexOf(v)
+      return i === -1 ? LEVEL_ORDER.length : i
+    }
+    return [...set].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+  }, [week])
 
   const locName = showLoc ? '全スタジオ' : (LOCS.find(([id]) => id === locId) ?? [0, ''])[1]
   const parts: string[] = []
@@ -175,7 +213,12 @@ function App() {
         onNext={() => setSelMs(selMs + 86400000 * (isMobile ? 1 : 7))}
         onToday={() => setSelMs(today.getTime())}
       />
-      {isMobile ? (
+      {loading && (
+        <div className="py-1 text-center text-[11px] tracking-[0.08em] text-[#8A8A84]">読み込み中…</div>
+      )}
+      {error ? (
+        <div className="px-4 py-16 text-center text-[13px] text-[#B5493C]">{error}</div>
+      ) : isMobile ? (
         <DayView classes={dayClasses} hourMarks={hourMarks} timelineHeight={timelineHeight} onFav={toggleFav} />
       ) : (
         <WeekView cols={weekCols} hourMarks={hourMarks} timelineHeight={timelineHeight} onFav={toggleFav} />
@@ -190,6 +233,8 @@ function App() {
         favOnly={favOnly}
         locName={locName}
         filterSummary={filterSummary}
+        genreOptions={genreOptions}
+        levelOptions={levelOptions}
         onToggleFilter={() => {
           setFilterOpen(!filterOpen)
           setLocMenuOpen(false)

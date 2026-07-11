@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { GENRES, GENRE_COLORS, LEVELS, LOCS, STAR_YELLOW } from '../lib/data'
+import { LOCS, STAR_YELLOW, genreColor } from '../lib/data'
 
 interface FilterBarProps {
   filterOpen: boolean
@@ -11,6 +11,10 @@ interface FilterBarProps {
   favOnly: boolean
   locName: string
   filterSummary: string
+  /** Genre chips available for the loaded schedule. */
+  genreOptions: string[]
+  /** Level chips available for the loaded schedule. */
+  levelOptions: string[]
   onToggleFilter: () => void
   onToggleLocMenu: () => void
   onSelectLoc: (id: number) => void
@@ -120,7 +124,7 @@ export function FilterBar(p: FilterBarProps) {
             <div className="flex flex-col gap-[9px]">
               <div className="text-[11px] font-bold tracking-[0.12em] text-[#8A8A84]">ジャンル</div>
               <div className="-mx-[18px] flex gap-[7px] overflow-x-auto px-[18px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {GENRES.map((g) => (
+                {p.genreOptions.map((g) => (
                   <button
                     key={g}
                     onClick={() => p.onToggleGenre(g)}
@@ -129,7 +133,7 @@ export function FilterBar(p: FilterBarProps) {
                   >
                     <span
                       className="h-[9px] w-[9px] flex-shrink-0 rounded-full"
-                      style={{ background: GENRE_COLORS[g] }}
+                      style={{ background: genreColor(g) }}
                     />
                     {g}
                   </button>
@@ -140,7 +144,7 @@ export function FilterBar(p: FilterBarProps) {
             <div className="flex flex-col gap-[9px]">
               <div className="text-[11px] font-bold tracking-[0.12em] text-[#8A8A84]">レベル</div>
               <div className="flex flex-wrap gap-[7px]">
-                {LEVELS.map((l) => (
+                {p.levelOptions.map((l) => (
                   <button
                     key={l}
                     onClick={() => p.onToggleLevel(l)}

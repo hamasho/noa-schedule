@@ -8,6 +8,14 @@ export interface Lesson {
   genre: string
   level: string
   inst: string
+  /** Instructor headshot URL (NoaLessonRecord.INSTRUCTOR_IMG). */
+  instImg: string
+  /** Lesson detail page on noadance.com (NoaLessonRecord.URL). */
+  url: string
+  /** Whether the lesson is currently bookable (RESERVE_FLG). */
+  reserveFlg: boolean
+  /** Whether a substitute instructor is covering, 代講 (Y_DAIKOU_FLG). */
+  daikouFlg: boolean
 }
 
 export interface LessonStatus {
