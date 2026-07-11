@@ -205,6 +205,10 @@ function App() {
         onToggleGenre={(g) => setGenres((prev) => toggleList(prev, g))}
         onToggleLevel={(l) => setLevels((prev) => toggleList(prev, l))}
         onToggleFavOnly={() => setFavOnly(!favOnly)}
+        onClose={() => {
+          setFilterOpen(false)
+          setLocMenuOpen(false)
+        }}
         onReset={() => {
           setGenres([])
           setLevels([])

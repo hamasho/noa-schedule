@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { GENRES, GENRE_COLORS, LEVELS, LOCS, STAR_YELLOW } from '../lib/data'
 
 interface FilterBarProps {
@@ -18,6 +19,7 @@ interface FilterBarProps {
   onToggleLevel: (l: string) => void
   onToggleFavOnly: () => void
   onReset: () => void
+  onClose: () => void
 }
 
 const chipStyle = (on: boolean) => ({
@@ -27,12 +29,31 @@ const chipStyle = (on: boolean) => ({
 })
 
 export function FilterBar(p: FilterBarProps) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const { filterOpen, onClose } = p
   const locMenuRows = [
     { id: 0, name: '全スタジオ', hasStar: false },
     ...LOCS.map(([id, name]) => ({ id, name, hasStar: true })),
   ]
+
+  useEffect(() => {
+    if (!filterOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onClose()
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [filterOpen, onClose])
+
   return (
-    <div className="fixed right-0 bottom-0 left-0 z-30">
+    <div ref={rootRef} className="fixed right-0 bottom-0 left-0 z-30">
       {p.filterOpen && (
         <div className="max-h-[68vh] overflow-y-auto border-t border-[#E8E8E4] bg-white shadow-[0_-14px_44px_rgba(20,20,16,0.10)]">
           <div className="mx-auto flex max-w-[1280px] flex-col gap-[18px] px-[18px] pt-[18px] pb-2">
@@ -98,12 +119,12 @@ export function FilterBar(p: FilterBarProps) {
 
             <div className="flex flex-col gap-[9px]">
               <div className="text-[11px] font-bold tracking-[0.12em] text-[#8A8A84]">ジャンル</div>
-              <div className="flex flex-wrap gap-[7px]">
+              <div className="-mx-[18px] flex gap-[7px] overflow-x-auto px-[18px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {GENRES.map((g) => (
                   <button
                     key={g}
                     onClick={() => p.onToggleGenre(g)}
-                    className="flex min-h-[38px] items-center gap-[7px] rounded-full border px-3.5 py-1.5 text-[13px] font-medium"
+                    className="flex min-h-[38px] flex-shrink-0 items-center gap-[7px] rounded-full border px-3.5 py-1.5 text-[13px] font-medium whitespace-nowrap"
                     style={chipStyle(p.genres.includes(g))}
                   >
                     <span
