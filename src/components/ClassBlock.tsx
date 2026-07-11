@@ -12,9 +12,12 @@ interface ClassCardContentProps {
 /** The visual card shared by calendar (fixed-height, absolute) and list (natural-height) modes. */
 export function ClassCardContent({ c, mobile, onFav, fill = false }: ClassCardContentProps) {
   return (
-    <div
+    <a
+      href={c.reserveUrl}
+      target="_blank"
+      rel="noopener noreferrer"
       className={
-        'relative ' +
+        'relative block cursor-pointer text-inherit no-underline ' +
         (fill ? 'h-full overflow-hidden ' : '') +
         (mobile ? 'rounded-[7px] py-1.5 pr-2 pl-3' : 'rounded-[6px] py-1 pr-1.5 pl-[9px]')
       }
@@ -53,7 +56,11 @@ export function ClassCardContent({ c, mobile, onFav, fill = false }: ClassCardCo
           </div>
         </div>
         <button
-          onClick={() => onFav(c.id)}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onFav(c.id)
+          }}
           aria-label="お気に入り"
           className={
             'flex-shrink-0 border-none bg-transparent ' +
@@ -87,7 +94,7 @@ export function ClassCardContent({ c, mobile, onFav, fill = false }: ClassCardCo
           {c.statusLabel}
         </div>
       )}
-    </div>
+    </a>
   )
 }
 

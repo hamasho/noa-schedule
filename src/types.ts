@@ -10,8 +10,18 @@ export interface Lesson {
   inst: string
   /** Instructor headshot URL (NoaLessonRecord.INSTRUCTOR_IMG). */
   instImg: string
-  /** Lesson detail page on noadance.com (NoaLessonRecord.URL). */
+  /** Genre/instructor content page on noadance.com (NoaLessonRecord.URL). */
   url: string
+  /** Studio code, letters, e.g. 'SA' = 新宿 2F (NoaLessonRecord.TENPO_CD). */
+  tenpoCode: string
+  /** Lesson-record genre code (NoaLessonRecord.GENRE_CODE); see lesson-url.ts. */
+  genreCode: number
+  /** Level code (NoaLessonRecord.LEVEL_CODE). */
+  levelCode: number
+  /** Instructor code, 4 digits (NoaLessonRecord.INSTRUCTOR_CODE). */
+  instructorCode: number
+  /** Day of week, JS getDay() numbering: 0=日…6=土 (NoaLessonRecord.LESSON_WEEKDAY). */
+  weekday: number
   /** Whether the lesson is currently bookable (RESERVE_FLG). */
   reserveFlg: boolean
   /** Whether a substitute instructor is covering, 代講 (Y_DAIKOU_FLG). */
@@ -33,6 +43,8 @@ export interface DecoLesson extends Lesson {
   color: string
   statusLabel: string
   statusColor: string
+  /** Reservation page URL for this lesson (see lib/lesson-url.ts). */
+  reserveUrl: string
 }
 
 export interface Positioned {

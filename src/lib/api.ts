@@ -146,6 +146,11 @@ export function recordToLesson(r: NoaLessonRecord): Lesson {
     inst: r.NICKNAME || r.INSTRUCTOR_NAME,
     instImg: r.INSTRUCTOR_IMG,
     url: r.URL,
+    tenpoCode: r.TENPO_CD,
+    genreCode: Number(r.GENRE_CODE),
+    levelCode: Number(r.LEVEL_CODE),
+    instructorCode: Number(r.INSTRUCTOR_CODE),
+    weekday: Number(r.LESSON_WEEKDAY),
     reserveFlg: r.RESERVE_FLG,
     daikouFlg: r.Y_DAIKOU_FLG,
   }

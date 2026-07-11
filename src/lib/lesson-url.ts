@@ -33,6 +33,8 @@
  *   LOCS), e.g. location 8 (新宿) covers tn codes S / SA / SV per floor.
  */
 
+import type { Lesson } from '../types'
+
 export const RESERVE_BASE_URL = 'https://www.noadance.com/reserve/'
 
 export const NOA_DANCE_BRAND_ID = 1
@@ -86,4 +88,17 @@ export function createLessonUrl({
     `&tt=${toHHMM(endMin)}` +
     `&wd=${weekday}`
   )
+}
+
+/** Builds the reservation URL for an app-domain {@link Lesson}. */
+export function lessonReserveUrl(l: Lesson): string {
+  return createLessonUrl({
+    tenpoCode: l.tenpoCode,
+    genreCode: l.genreCode,
+    levelCode: l.levelCode,
+    instructorCode: l.instructorCode,
+    startMin: l.startMin,
+    endMin: l.endMin,
+    weekday: l.weekday,
+  })
 }

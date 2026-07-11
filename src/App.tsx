@@ -8,6 +8,7 @@ import { FilterBar } from './components/FilterBar'
 import type { HourMark } from './components/HourMarks'
 import { CLOSED_DISPLAY, DAY_END, DAY_START, DOWS, LEVEL_ORDER, LOCS, PPH, genreColor } from './lib/data'
 import { reservationStatus, toHM } from './lib/schedule'
+import { lessonReserveUrl } from './lib/lesson-url'
 import { fetchNoaWeek } from './lib/api'
 import { layoutTimeline } from './lib/layout'
 import type { DecoLesson, Lesson } from './types'
@@ -123,6 +124,7 @@ function App() {
       color: st.dim ? '#8A8A84' : genreColor(c.genre),
       statusLabel: st.label,
       statusColor: st.color,
+      reserveUrl: lessonReserveUrl(c),
     }
   }
 
