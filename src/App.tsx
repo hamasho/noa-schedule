@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Header, type DayTab } from './components/Header'
+import { Header, type DayTab, type ViewMode } from './components/Header'
 import { DayView } from './components/DayView'
 import { WeekView, type WeekCol } from './components/WeekView'
+import { DayList } from './components/DayList'
+import { WeekList, type WeekListCol } from './components/WeekList'
 import { FilterBar } from './components/FilterBar'
 import type { HourMark } from './components/HourMarks'
 import { CLOSED_DISPLAY, DAY_END, DAY_START, DOWS, LEVEL_ORDER, LOCS, PPH, genreColor } from './lib/data'
@@ -21,6 +23,7 @@ interface Saved {
   favOnly?: boolean
   favs?: Record<string, boolean>
   favLocs?: number[]
+  viewMode?: ViewMode
 }
 
 function loadSaved(): Saved {
@@ -50,6 +53,7 @@ function App() {
   const [favOnly, setFavOnly] = useState(!!saved.favOnly)
   const [favs, setFavs] = useState<Record<string, boolean>>(saved.favs ?? {})
   const [favLocs, setFavLocs] = useState<number[]>(saved.favLocs ?? [8])
+  const [viewMode, setViewMode] = useState<ViewMode>(saved.viewMode ?? 'calendar')
 
   const [week, setWeek] = useState<Lesson[][]>(emptyWeek)
   const [loading, setLoading] = useState(true)
@@ -82,11 +86,11 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ locId, genres, levels, favOnly, favs, favLocs }))
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ locId, genres, levels, favOnly, favs, favLocs, viewMode }))
     } catch {
       // storage unavailable (private mode etc.) — filters just won't persist
     }
-  }, [locId, genres, levels, favOnly, favs, favLocs])
+  }, [locId, genres, levels, favOnly, favs, favLocs, viewMode])
 
   const sel = new Date(selMs)
   const monday = new Date(selMs)
@@ -153,7 +157,12 @@ function App() {
       onSelect: () => setSelMs(d.getTime()),
     }
   })
-  const dayClasses = layoutTimeline(classesFor(selDayIdx), 50)
+  // Sorted lessons per weekday, computed once and shared by calendar and list modes.
+  const weekRaw = DOWS.map((_, i) => classesFor(i))
+  const dayRaw = weekRaw[selDayIdx]
+
+  const isCalendar = viewMode === 'calendar'
+  const dayClasses = isCalendar ? layoutTimeline(dayRaw, 50) : []
 
   const hourMarks: HourMark[] = []
   for (let m = DAY_START; m <= DAY_END; m += 60) {
@@ -161,15 +170,14 @@ function App() {
   }
   const timelineHeight = Math.round(((DAY_END - DAY_START) / 60) * PPH) + 20
 
-  const weekCols: WeekCol[] = DOWS.map((dw, i) => {
+  const weekMeta = DOWS.map((dw, i) => {
     const d = dateOf(i)
-    return {
-      dow: dw,
-      date: d.getMonth() + 1 + '/' + d.getDate(),
-      isToday: d.getTime() === today.getTime(),
-      classes: layoutTimeline(classesFor(i), 0),
-    }
+    return { dow: dw, date: d.getMonth() + 1 + '/' + d.getDate(), isToday: d.getTime() === today.getTime() }
   })
+  const weekCols: WeekCol[] = isCalendar
+    ? weekMeta.map((m, i) => ({ ...m, classes: layoutTimeline(weekRaw[i], 0) }))
+    : []
+  const weekListCols: WeekListCol[] = weekMeta.map((m, i) => ({ ...m, classes: weekRaw[i] }))
 
   const fmt = (d: Date) => d.getMonth() + 1 + '/' + d.getDate() + '（' + DOWS[(d.getDay() + 6) % 7] + '）'
   const rangeLabel = isMobile ? fmt(sel) : fmt(monday) + ' 〜 ' + fmt(dateOf(6))
@@ -209,6 +217,8 @@ function App() {
         rangeLabel={rangeLabel}
         isMobile={isMobile}
         dayTabs={dayTabs}
+        viewMode={viewMode}
+        onSetViewMode={setViewMode}
         onPrev={() => setSelMs(selMs - 86400000 * (isMobile ? 1 : 7))}
         onNext={() => setSelMs(selMs + 86400000 * (isMobile ? 1 : 7))}
         onToday={() => setSelMs(today.getTime())}
@@ -219,9 +229,15 @@ function App() {
       {error ? (
         <div className="px-4 py-16 text-center text-[13px] text-[#B5493C]">{error}</div>
       ) : isMobile ? (
-        <DayView classes={dayClasses} hourMarks={hourMarks} timelineHeight={timelineHeight} onFav={toggleFav} />
-      ) : (
+        isCalendar ? (
+          <DayView classes={dayClasses} hourMarks={hourMarks} timelineHeight={timelineHeight} onFav={toggleFav} />
+        ) : (
+          <DayList classes={dayRaw} onFav={toggleFav} />
+        )
+      ) : isCalendar ? (
         <WeekView cols={weekCols} hourMarks={hourMarks} timelineHeight={timelineHeight} onFav={toggleFav} />
+      ) : (
+        <WeekList cols={weekListCols} onFav={toggleFav} />
       )}
       <FilterBar
         filterOpen={filterOpen}

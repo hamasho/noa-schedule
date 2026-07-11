@@ -1,3 +1,5 @@
+export type ViewMode = 'calendar' | 'list'
+
 export interface DayTab {
   dow: string
   date: string
@@ -10,12 +12,18 @@ interface HeaderProps {
   rangeLabel: string
   isMobile: boolean
   dayTabs: DayTab[]
+  viewMode: ViewMode
+  onSetViewMode: (m: ViewMode) => void
   onPrev: () => void
   onNext: () => void
   onToday: () => void
 }
 
-export function Header({ rangeLabel, isMobile, dayTabs, onPrev, onNext, onToday }: HeaderProps) {
+export function Header({ rangeLabel, isMobile, dayTabs, viewMode, onSetViewMode, onPrev, onNext, onToday }: HeaderProps) {
+  const modes: { mode: ViewMode; icon: string; label: string }[] = [
+    { mode: 'calendar', icon: '📅', label: 'カレンダー' },
+    { mode: 'list', icon: '☰', label: 'リスト' },
+  ]
   return (
     <div className="sticky top-0 z-20 border-b border-[#E8E8E4] bg-[rgba(250,250,248,0.94)] backdrop-blur-[10px]">
       <div className="mx-auto flex max-w-[1400px] items-center gap-3.5 px-[18px] pt-3 pb-2.5">
@@ -44,6 +52,26 @@ export function Header({ rangeLabel, isMobile, dayTabs, onPrev, onNext, onToday 
           >
             ›
           </button>
+          <div className="ml-1 flex h-[34px] items-center gap-0.5 rounded-[9px] border border-[#E0E0DA] bg-white p-0.5">
+            {modes.map((m) => {
+              const active = viewMode === m.mode
+              return (
+                <button
+                  key={m.mode}
+                  onClick={() => onSetViewMode(m.mode)}
+                  aria-label={m.label}
+                  aria-pressed={active}
+                  className={
+                    'flex h-[28px] items-center gap-1 rounded-[7px] px-2 text-[12px] font-bold whitespace-nowrap ' +
+                    (active ? 'bg-[#1A1A18] text-white' : 'bg-transparent text-[#55554F] hover:bg-[#F1F1ED]')
+                  }
+                >
+                  <span className="text-[13px] leading-none">{m.icon}</span>
+                  {!isMobile && <span>{m.label}</span>}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
       {isMobile && (
