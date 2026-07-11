@@ -1,4 +1,4 @@
-# NOA Scheduler
+# NOA Schedule
 
 Dance-studio lesson schedule app, implemented from the Claude Design project
 "Noa Dance Schedule Redesign" (`design/Noa Schedule.dc.html` is the imported
